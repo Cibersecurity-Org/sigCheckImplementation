@@ -1,8 +1,9 @@
-#
-#
-#
-QueryService.Proxy=SimpleQueryService:tcp -p 11800
+# Configuración del adaptador Checker
+Checker.Endpoints=tcp -p 11801
 
-# Only listen on the ZeroTier's LIASOn1 interface by default.
-#
+# Configuración de host
 Ice.Default.Host=localhost
+
+# Configuración adicional opcional
+Ice.ThreadPool.Server.Size=10
+Ice.ThreadPool.Server.SizeMax=100

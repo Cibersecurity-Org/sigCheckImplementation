@@ -1,0 +1,11 @@
+#
+#
+#
+QueryService.Proxy=SimpleQueryService:tcp -p 11800
+Master.Proxy=SimpleMaster:tcp -p 11900
+
+Ice.Default.Locator=DemoIceGrid/Locator:default -h localhost -p 4061
+
+# Only listen on the ZeroTier's LIASOn1 interface by default.
+#
+Ice.Default.Host=localhost

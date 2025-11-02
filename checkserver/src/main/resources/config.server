@@ -1,0 +1,8 @@
+#
+#
+#
+QueryService.Proxy=SimpleQueryService:tcp -p 11800
+
+# Only listen on the ZeroTier's LIASOn1 interface by default.
+#
+Ice.Default.Host=localhost

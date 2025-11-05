@@ -38,8 +38,8 @@ public class Checkserver {
             signCheckerI sig = new signCheckerI();
 
             // Datos del cliente
-            Cliente cliente = new Cliente(1,"Juan", "Pérez", "juan.perez@empresa.com");
-            String password = "MiContraseñaSegura123";
+            Cliente cliente = new Cliente(1,"Juan", "Plaza", "juan.perez@empresa.com");
+            String password = "MiContrasenaSegura123";
             String directorioSalida = "./claves_generadas";
 
             // Crear directorio si no existe
@@ -49,10 +49,10 @@ public class Checkserver {
             KeyPair claves = sig.generateKeyPair(cliente, 2048);
             // Guardar claves en archivos
             sig.guardarClavePublica(claves.getPublic(), directorioSalida, cliente);
-            sig.guardarClavePrivada(claves.getPrivate(), directorioSalida, cliente, password);
+            sig.guardarClavePrivada(claves.getPrivate(), claves.getPublic(), directorioSalida, cliente, password);
 
-            System.out.println("\n🎯 Proceso completado para: " + cliente.getNombreCompleto());
-            System.out.println("📝 La clave privada está protegida con contraseña en formato PKCS12");
+            System.out.println("\n Proceso completado para: " + cliente.getNombreCompleto());
+            System.out.println(" La clave privada esta protegida con contraseña en formato PKCS12");
 
 
         }catch (Exception e) {

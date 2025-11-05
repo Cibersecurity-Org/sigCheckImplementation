@@ -22,6 +22,9 @@ plugins {
     dependencies {
         implementation 'com.zeroc:ice:3.7.10'
         implementation 'org.postgresql:postgresql:42.2.24'
+        // BouncyCastle para crear certificados X.509 auto-firmados
+        implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
+        implementation 'org.bouncycastle:bcpkix-jdk15on:1.70'
 
     }
     //

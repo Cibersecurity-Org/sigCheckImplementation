@@ -9,7 +9,10 @@ public class Checkserver {
 
 
     public static void main(String[] args) {
-        System.out.println("Server is running...");
+        System.out.println("╔════════════════════════════════════════════════════════════════╗");
+        System.out.println("║   SERVIDOR DE FIRMA DIGITAL RSA/SHA-256 - Fase 1 MVP          ║");
+        System.out.println("╚════════════════════════════════════════════════════════════════╝");
+        System.out.println();
 
         java.util.List<String> extraArgs = new java.util.ArrayList<>();
         try
@@ -29,7 +32,19 @@ public class Checkserver {
             adapter.activate();
 
             //Mostrar mensaje de que el servidor está listo
-            System.out.println("Servicio signChecker disponible en puerto 11801");
+            System.out.println("═══════════════════════════════════════════════════════════════");
+            System.out.println("           ✓ SERVIDOR INICIADO CORRECTAMENTE");
+            System.out.println("═══════════════════════════════════════════════════════════════");
+            System.out.println("  🌐 Puerto: 11801");
+            System.out.println("  🔐 Servicio: signChecker");
+            System.out.println("  📋 Funcionalidades:");
+            System.out.println("     • Firma digital RSA/SHA-256");
+            System.out.println("     • Verificación de firmas");
+            System.out.println("     • Gestión de usuarios (Fase 1 MVP)");
+            System.out.println("     • Repositorio de claves públicas");
+            System.out.println("═══════════════════════════════════════════════════════════════");
+            System.out.println();
+            signCheckerI.mostrarEstadisticas();
             System.out.println("Presiona Enter para cerrar el servidor...");
 
             //Esperar a que el usuario presione Enter para cerrar el servidor

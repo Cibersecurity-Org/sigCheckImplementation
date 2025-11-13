@@ -33,10 +33,16 @@ Sistema completo de firma y verificación digital de archivos usando criptograf�
 java -jar checkserver/build/libs/checkserver.jar
 ```
 
-### Ejecutar el cliente Ice (en construcción)
+### Ejecutar el cliente Ice
 ```bash
 java -jar client/build/libs/client.jar
 ```
+
+El cliente iniciará con un menú interactivo que permite:
+- Generar claves RSA
+- Firmar archivos localmente (SEGURO)
+- Verificar firmas (local y remoto)
+- Gestionar conexiones al servidor
 
 ### Ejecutar prueba completa del sistema
 ```bash
@@ -154,7 +160,7 @@ if (esValida) {
 | Firma digital | ✅ Completo |
 | Verificación de firmas | ✅ Completo |
 | Servidor Ice | ✅ Funcional |
-| Cliente Ice | ⚠️ En desarrollo |
+| Cliente Ice | ✅ Completo |
 | Integración PostgreSQL | ⚠️ Pendiente |
 
 ## Autor

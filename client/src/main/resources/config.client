@@ -1,0 +1,7 @@
+# Configuración del cliente de firma digital
+# Servidor de firmas
+Ice.Default.Host=localhost
+
+# Sin necesidad de configuración adicional
+# El cliente se conecta directamente al proxy
+

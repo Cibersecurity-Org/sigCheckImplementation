@@ -24,7 +24,7 @@ public class Client {
     private static final Scanner scanner = new Scanner(System.in);
     private static signCheckerI firmadorLocal;
     private static com.zeroc.Ice.Communicator communicator;
-    private static SignCheckerPrx servidorRemoto;
+    private static Demo.signCheckerPrx servidorRemoto;
     private static boolean conectadoAlServidor = false;
 
     public static void main(String[] args) {
@@ -562,7 +562,7 @@ public class Client {
             );
             
             // Hacer cast al tipo correcto
-            servidorRemoto = SignCheckerPrx.checkedCast(base);
+            servidorRemoto = Demo.signCheckerPrx.checkedCast(base);
             
             if (servidorRemoto == null) {
                 throw new Error("Proxy inválido - no se pudo conectar al servidor");

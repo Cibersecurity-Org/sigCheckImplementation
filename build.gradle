@@ -37,8 +37,9 @@ plugins {
     //
     jar {
         manifest {
+            def mainClassName = project.name == 'client' ? 'Client' : 'Checkserver'
             attributes(
-                "Main-Class": project.name.capitalize(),
+                "Main-Class": mainClassName,
                 "Class-Path": configurations.runtimeClasspath.resolve().collect { it.toURI() }.join(' ')
             )
         }

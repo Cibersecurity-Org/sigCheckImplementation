@@ -161,7 +161,7 @@ if (esValida) {
 | Verificación de firmas | ✅ Completo |
 | Servidor Ice | ✅ Funcional |
 | Cliente Ice | ✅ Completo |
-| Integración PostgreSQL | ⚠️ Pendiente |
+
 
 ## Autor
 

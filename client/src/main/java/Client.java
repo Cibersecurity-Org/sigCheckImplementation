@@ -526,7 +526,17 @@ public class Client {
         System.out.println("  • Servidor remoto: " + (conectadoAlServidor ? "✓ Conectado" : "✗ Desconectado"));
         
         if (conectadoAlServidor && servidorRemoto != null) {
-            System.out.println("  • Dirección servidor: localhost:11801");
+            // Mostrar la dirección efectiva desde la configuración
+            com.zeroc.Ice.Properties props = communicator.getProperties();
+            String proxy = props.getProperty("Checker.Proxy");
+            if (proxy == null || proxy.trim().isEmpty()) {
+                String host = props.getPropertyWithDefault("Checker.Host",
+                        props.getPropertyWithDefault("Ice.Default.Host", "localhost"));
+                String port = props.getPropertyWithDefault("Checker.Port", "11801");
+                System.out.println("  • Dirección servidor: " + host + ":" + port);
+            } else {
+                System.out.println("  • Proxy servidor: " + proxy);
+            }
         }
         
         System.out.println();
@@ -556,10 +566,18 @@ public class Client {
             // Inicializar comunicador Ice
             communicator = com.zeroc.Ice.Util.initialize(args, "config.client");
             
+            // Construir proxy desde configuración (permite host/puerto remotos)
+            com.zeroc.Ice.Properties props = communicator.getProperties();
+            String proxy = props.getProperty("Checker.Proxy");
+            if (proxy == null || proxy.trim().isEmpty()) {
+                String host = props.getPropertyWithDefault("Checker.Host",
+                        props.getPropertyWithDefault("Ice.Default.Host", "localhost"));
+                String port = props.getPropertyWithDefault("Checker.Port", "11801");
+                proxy = "simpleChecker:tcp -h " + host + " -p " + port;
+            }
+
             // Obtener proxy al servidor
-            com.zeroc.Ice.ObjectPrx base = communicator.stringToProxy(
-                "simpleChecker:tcp -h localhost -p 11801"
-            );
+            com.zeroc.Ice.ObjectPrx base = communicator.stringToProxy(proxy);
             
             // Hacer cast al tipo correcto
             servidorRemoto = Demo.signCheckerPrx.checkedCast(base);
@@ -569,7 +587,7 @@ public class Client {
             }
             
             conectadoAlServidor = true;
-            System.out.println("✓ Conectado al servidor en localhost:11801");
+            System.out.println("✓ Conectado al servidor en " + proxy);
             System.out.println("  (Las operaciones remotas están disponibles)");
             
         } catch (Exception e) {

@@ -8,4 +8,4 @@ Ice.Default.Locator=DemoIceGrid/Locator:default -h localhost -p 4061
 
 # Only listen on the ZeroTier's LIASOn1 interface by default.
 #
-Ice.Default.Host=localhost
+Ice.Default.Host=10.243.205.239

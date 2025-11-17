@@ -1,8 +1,13 @@
 # Configuración del adaptador Checker
-Checker.Endpoints=tcp -p 11801
+# Escuchar en todas las interfaces (incluye ZeroTier)
+Checker.Endpoints=tcp -h 0.0.0.0 -p 11801
 
-# Configuración de host
-Ice.Default.Host=localhost
+# (Opcional) Publicar una IP específica para clientes detrás de NAT o con ZeroTier
+# Reemplace 10.x.x.x por su IP de ZeroTier si desea publicar esa dirección
+#Checker.PublishedEndpoints=tcp -h 10.x.x.x -p 11801
+
+# Configuración de host por defecto (evitar anunciar localhost)
+Ice.Default.Host=0.0.0.0
 
 # Configuración adicional opcional
 Ice.ThreadPool.Server.Size=10

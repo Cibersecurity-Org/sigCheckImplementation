@@ -68,6 +68,50 @@ public class signCheckerI implements signChecker {
      */
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    /**
+     * Conjunto de clientes activos por dirección remota (IP:puerto).
+     * Esto permite imprimir estado cuando llega una conexión/llamada remota.
+     */
+    private static final Set<String> clientesActivos = java.util.Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+
+    /**
+     * Obtiene una representación legible de la dirección remota del cliente.
+     */
+    private String obtenerDireccionRemota(com.zeroc.Ice.Current current) {
+        try {
+            if (current != null && current.con != null) {
+                com.zeroc.Ice.ConnectionInfo info = current.con.getInfo();
+                if (info instanceof com.zeroc.Ice.IPConnectionInfo) {
+                    com.zeroc.Ice.IPConnectionInfo ipInfo = (com.zeroc.Ice.IPConnectionInfo) info;
+                    return ipInfo.remoteAddress + ":" + ipInfo.remotePort;
+                } else {
+                    return info.toString();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return "desconocido";
+    }
+
+    /**
+     * Registra actividad de cliente y muestra resumen en consola.
+     */
+    private void logActividadCliente(com.zeroc.Ice.Current current, String operacion) {
+        String remoto = obtenerDireccionRemota(current);
+        boolean nuevo = clientesActivos.add(remoto);
+        String ts = LocalDateTime.now().format(DATE_FORMAT);
+        if (nuevo) {
+            System.out.println("═══════════════════════════════════════════════════════════════");
+            System.out.println("   🟢 NUEVA CONEXIÓN REMOTA");
+            System.out.println("═══════════════════════════════════════════════════════════════");
+            System.out.println("  Cliente: " + remoto);
+            System.out.println("  Hora:    " + ts);
+        }
+        System.out.println("  Actividad: " + operacion + "  • Cliente: " + remoto + "  • " + ts);
+        System.out.println("  Usuarios conectados: " + usuariosConectados.size() + "  |  Clientes activos (IP): " + clientesActivos.size());
+        System.out.println("───────────────────────────────────────────────────────────────");
+    }
+
     @Override
     public void generateKey(String keypassword, com.zeroc.Ice.Current current) {
 
@@ -175,6 +219,7 @@ public class signCheckerI implements signChecker {
      */
     @Override
     public void signFile(String path, String signaturePath, String privateKeyPath, String keyPassword, com.zeroc.Ice.Current current) {
+        logActividadCliente(current, "signFile");
         try {
             // Validar parámetros
             validarParametrosSignFile(path, signaturePath, privateKeyPath, keyPassword);
@@ -229,6 +274,7 @@ public class signCheckerI implements signChecker {
      */
     @Override
     public boolean verifySign(String path, String signaturePath, String publicKeyPath, com.zeroc.Ice.Current current) {
+        logActividadCliente(current, "verifySign");
         try {
             // Validar parámetros
             validarParametrosVerifySign(path, signaturePath, publicKeyPath);
@@ -307,6 +353,57 @@ public class signCheckerI implements signChecker {
             return false;
         } catch (Exception e) {
             System.err.println("✗ ERROR AL VERIFICAR FIRMA: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Verifica la firma digital enviando los archivos como datos (bytes).
+     * Evita depender de rutas del sistema de archivos del servidor.
+     *
+     * @param originalData Contenido del archivo original
+     * @param signatureFileData Contenido del archivo .sig (texto con encabezados) en bytes
+     * @param publicKeyFileData Contenido del archivo de clave pública (.txt) en bytes
+     * @param current Contexto Ice
+     * @return true si la firma es válida
+     */
+    public boolean verifySignData(byte[] originalData, byte[] signatureFileData, byte[] publicKeyFileData, com.zeroc.Ice.Current current) {
+        logActividadCliente(current, "verifySignData");
+        try {
+            if (originalData == null || originalData.length == 0) {
+                throw new IllegalArgumentException("El archivo original está vacío");
+            }
+            if (signatureFileData == null || signatureFileData.length == 0) {
+                throw new IllegalArgumentException("El archivo de firma está vacío");
+            }
+            if (publicKeyFileData == null || publicKeyFileData.length == 0) {
+                throw new IllegalArgumentException("El archivo de clave pública está vacío");
+            }
+
+            String publicKeyText = new String(publicKeyFileData, java.nio.charset.StandardCharsets.UTF_8);
+            PublicKey clavePublica = cargarClavePublicaDesdeTexto(publicKeyText);
+
+            String firmaTexto = new String(signatureFileData, java.nio.charset.StandardCharsets.UTF_8);
+            byte[] firma = cargarFirmaDesdeTexto(firmaTexto);
+
+            byte[] hashArchivo = calcularHashBytes(originalData);
+            boolean esValida = verificarFirmaHash(hashArchivo, firma, clavePublica);
+
+            System.out.println();
+            System.out.println("═══════════════════════════════════════════════════════════════");
+            System.out.println("           VERIFICACIÓN (Subida de archivos)");
+            System.out.println("═══════════════════════════════════════════════════════════════");
+            System.out.println("   Original: " + originalData.length + " bytes");
+            System.out.println("   Firma:    " + firma.length + " bytes");
+            System.out.println("   Clave:    " + (clavePublica.getEncoded().length * 8) + " bits");
+            System.out.println("═══════════════════════════════════════════════════════════════");
+            System.out.println(esValida ? "✓ FIRMA VÁLIDA" : "✗ FIRMA INVÁLIDA");
+            System.out.println("═══════════════════════════════════════════════════════════════");
+
+            return esValida;
+        } catch (Exception e) {
+            System.err.println("✗ ERROR EN verifySignData: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -434,6 +531,28 @@ public class signCheckerI implements signChecker {
         return keyFactory.generatePublic(keySpec);
     }
 
+    /**
+     * Carga una clave pública desde texto (formato .txt con encabezados).
+     */
+    private PublicKey cargarClavePublicaDesdeTexto(String contenidoTexto) throws Exception {
+        StringBuilder contenido = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new StringReader(contenidoTexto))) {
+            String linea;
+            while ((linea = reader.readLine()) != null) {
+                if (!linea.startsWith("---") && !linea.startsWith("Cliente:") && !linea.startsWith("Email:")) {
+                    contenido.append(linea.trim());
+                }
+            }
+        }
+        if (contenido.length() == 0) {
+            throw new IllegalArgumentException("Contenido de clave pública vacío o inválido");
+        }
+        byte[] bytesClavePublica = Base64.getDecoder().decode(contenido.toString());
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(bytesClavePublica);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        return keyFactory.generatePublic(keySpec);
+    }
+
     // ============================================================================
     // MÉTODOS AUXILIARES PRIVADOS - OPERACIONES CRIPTOGRÁFICAS
     // ============================================================================
@@ -460,6 +579,14 @@ public class signCheckerI implements signChecker {
         }
         
         return digest.digest();
+    }
+
+    /**
+     * Calcula el hash SHA-256 de un arreglo de bytes.
+     */
+    private byte[] calcularHashBytes(byte[] datos) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        return digest.digest(datos);
     }
 
     /**
@@ -578,6 +705,30 @@ public class signCheckerI implements signChecker {
         return Base64.getDecoder().decode(firmaBase64.toString());
     }
 
+    /**
+     * Carga la firma desde texto (mismo formato que archivo .sig).
+     */
+    private byte[] cargarFirmaDesdeTexto(String firmaTexto) throws Exception {
+        StringBuilder firmaBase64 = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new StringReader(firmaTexto))) {
+            String linea;
+            boolean dentroFirma = false;
+            while ((linea = reader.readLine()) != null) {
+                if (linea.equals("---")) {
+                    dentroFirma = true;
+                    continue;
+                }
+                if (dentroFirma) {
+                    firmaBase64.append(linea.trim());
+                }
+            }
+        }
+        if (firmaBase64.length() == 0) {
+            throw new IllegalArgumentException("Contenido de firma vacío o inválido");
+        }
+        return Base64.getDecoder().decode(firmaBase64.toString());
+    }
+
     // ============================================================================
     // MÉTODOS AUXILIARES PRIVADOS - UTILIDADES
     // ============================================================================
@@ -617,6 +768,7 @@ public class signCheckerI implements signChecker {
      */
     @Override
     public String registerUser(String nombre, String apellido, String email, String publicKey, com.zeroc.Ice.Current current) {
+        logActividadCliente(current, "registerUser");
         try {
             // Validar parámetros
             if (email == null || email.trim().isEmpty()) {
@@ -687,6 +839,7 @@ public class signCheckerI implements signChecker {
      */
     @Override
     public String getPublicKey(String email, com.zeroc.Ice.Current current) {
+        logActividadCliente(current, "getPublicKey");
         try {
             if (email == null || email.trim().isEmpty()) {
                 throw new IllegalArgumentException("El email no puede estar vacío");
@@ -719,6 +872,7 @@ public class signCheckerI implements signChecker {
      */
     @Override
     public Usuario[] getConnectedUsers(com.zeroc.Ice.Current current) {
+        logActividadCliente(current, "getConnectedUsers");
         try {
             List<Usuario> conectados = new ArrayList<>();
             
@@ -751,6 +905,7 @@ public class signCheckerI implements signChecker {
      */
     @Override
     public Usuario[] getAllUsers(com.zeroc.Ice.Current current) {
+        logActividadCliente(current, "getAllUsers");
         try {
             List<Usuario> todosLosUsuarios = new ArrayList<>();
             
@@ -785,6 +940,7 @@ public class signCheckerI implements signChecker {
      */
     @Override
     public boolean verifySignByUser(String path, String signaturePath, String userEmail, com.zeroc.Ice.Current current) {
+        logActividadCliente(current, "verifySignByUser");
         try {
             System.out.println("═══════════════════════════════════════════════════════════════");
             System.out.println("     VERIFICACIÓN DE FIRMA POR USUARIO (Fase 1 MVP)");

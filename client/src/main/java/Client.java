@@ -467,15 +467,25 @@ public class Client {
                 return;
             }
 
-            // VERIFICAR REMOTAMENTE VÍA ICE
+            // VERIFICAR REMOTAMENTE VÍA ICE (subiendo archivos)
             System.out.println("\n⏳ Enviando solicitud al servidor...");
             long inicio = System.currentTimeMillis();
 
-            boolean esValida = servidorRemoto.verifySign(
-                archivoOriginal,
-                archivoFirma,
-                rutaClavePublica
-            );
+            // Leer contenidos de archivos para enviarlos
+            byte[] originalData = java.nio.file.Files.readAllBytes(new java.io.File(archivoOriginal).toPath());
+            byte[] signatureFileData = java.nio.file.Files.readAllBytes(new java.io.File(archivoFirma).toPath());
+            byte[] publicKeyFileData = java.nio.file.Files.readAllBytes(new java.io.File(rutaClavePublica).toPath());
+
+            boolean esValida;
+            try {
+                java.lang.reflect.Method m = servidorRemoto.getClass().getMethod(
+                    "verifySignData", byte[].class, byte[].class, byte[].class
+                );
+                Object result = m.invoke(servidorRemoto, originalData, signatureFileData, publicKeyFileData);
+                esValida = (result instanceof Boolean) ? ((Boolean) result) : false;
+            } catch (NoSuchMethodException nsme) {
+                throw new RuntimeException("El servidor no soporta subida de archivos (verifySignData). Actualice servidor/cliente.");
+            }
 
             long tiempoVerificacion = System.currentTimeMillis() - inicio;
 

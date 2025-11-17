@@ -1,15 +1,14 @@
 # Configuración del cliente de firma digital
 
 # Host/puerto del servidor (personalizable para ZeroTier)
-Checker.Host=localhost
+Checker.Host=10.243.205.239
 Checker.Port=11801
 
 # Alternativamente, puede definir el proxy completo:
-#Checker.Proxy=simpleChecker:tcp -h 10.243.xx.yy -p 11801
+#Checker.Proxy=simpleChecker:tcp -h 10.243.205.239 -p 11801
 
 # Host por defecto para propiedades Ice (fallback)
 Ice.Default.Host=localhost
 
 # Sin necesidad de configuración adicional
 # El cliente se conecta directamente al proxy
-

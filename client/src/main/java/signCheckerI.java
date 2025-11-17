@@ -354,6 +354,61 @@ public class signCheckerI implements signChecker {
     // ============================================================================
 
     /**
+     * Verifica la firma digital enviando los archivos como datos (bytes).
+     * Evita depender de rutas del sistema de archivos del servidor.
+     *
+     * @param originalData Contenido del archivo original
+     * @param signatureFileData Contenido del archivo .sig (texto con encabezados) en bytes
+     * @param publicKeyFileData Contenido del archivo de clave pública (.txt) en bytes
+     * @param current Contexto Ice
+     * @return true si la firma es válida
+     */
+    @Override
+    public boolean verifySignData(byte[] originalData, byte[] signatureFileData, byte[] publicKeyFileData, com.zeroc.Ice.Current current) {
+        try {
+            if (originalData == null || originalData.length == 0) {
+                throw new IllegalArgumentException("El archivo original está vacío");
+            }
+            if (signatureFileData == null || signatureFileData.length == 0) {
+                throw new IllegalArgumentException("El archivo de firma está vacío");
+            }
+            if (publicKeyFileData == null || publicKeyFileData.length == 0) {
+                throw new IllegalArgumentException("El archivo de clave pública está vacío");
+            }
+
+            String publicKeyText = new String(publicKeyFileData, java.nio.charset.StandardCharsets.UTF_8);
+            PublicKey clavePublica = cargarClavePublicaDesdeTexto(publicKeyText);
+
+            String firmaTexto = new String(signatureFileData, java.nio.charset.StandardCharsets.UTF_8);
+            byte[] firma = cargarFirmaDesdeTexto(firmaTexto);
+
+            byte[] hashArchivo = calcularHashBytes(originalData);
+            boolean esValida = verificarFirmaHash(hashArchivo, firma, clavePublica);
+
+            System.out.println();
+            System.out.println("═══════════════════════════════════════════════════════════════");
+            System.out.println("           VERIFICACIÓN (Subida de archivos)");
+            System.out.println("═══════════════════════════════════════════════════════════════");
+            System.out.println("   Original: " + originalData.length + " bytes");
+            System.out.println("   Firma:    " + firma.length + " bytes");
+            System.out.println("   Clave:    " + (clavePublica.getEncoded().length * 8) + " bits");
+            System.out.println("═══════════════════════════════════════════════════════════════");
+            System.out.println(esValida ? "✓ FIRMA VÁLIDA" : "✗ FIRMA INVÁLIDA");
+            System.out.println("═══════════════════════════════════════════════════════════════");
+
+            return esValida;
+        } catch (Exception e) {
+            System.err.println("✗ ERROR EN verifySignData: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // ============================================================================
+    // MÉTODOS AUXILIARES PRIVADOS - VALIDACIÓN
+    // ============================================================================
+
+    /**
      * Carga una clave privada desde un archivo PKCS12.
      * 
      * @param rutaP12 Ruta del archivo PKCS12
@@ -460,6 +515,60 @@ public class signCheckerI implements signChecker {
         }
         
         return digest.digest();
+    }
+
+    /**
+     * Calcula el hash SHA-256 de un arreglo de bytes.
+     */
+    private byte[] calcularHashBytes(byte[] datos) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        return digest.digest(datos);
+    }
+
+    /**
+     * Carga una clave pública desde texto (formato .txt con encabezados).
+     */
+    private PublicKey cargarClavePublicaDesdeTexto(String contenidoTexto) throws Exception {
+        StringBuilder contenido = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new StringReader(contenidoTexto))) {
+            String linea;
+            while ((linea = reader.readLine()) != null) {
+                if (!linea.startsWith("---") && !linea.startsWith("Cliente:") && !linea.startsWith("Email:")) {
+                    contenido.append(linea.trim());
+                }
+            }
+        }
+        if (contenido.length() == 0) {
+            throw new IllegalArgumentException("Contenido de clave pública vacío o inválido");
+        }
+        byte[] bytesClavePublica = Base64.getDecoder().decode(contenido.toString());
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(bytesClavePublica);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        return keyFactory.generatePublic(keySpec);
+    }
+
+    /**
+     * Carga la firma desde texto (mismo formato que archivo .sig).
+     */
+    private byte[] cargarFirmaDesdeTexto(String firmaTexto) throws Exception {
+        StringBuilder firmaBase64 = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new StringReader(firmaTexto))) {
+            String linea;
+            boolean dentroFirma = false;
+            while ((linea = reader.readLine()) != null) {
+                if (linea.equals("---")) {
+                    dentroFirma = true;
+                    continue;
+                }
+                if (dentroFirma) {
+                    firmaBase64.append(linea.trim());
+                }
+            }
+        }
+        if (firmaBase64.length() == 0) {
+            throw new IllegalArgumentException("Contenido de firma vacío o inválido");
+        }
+        return Base64.getDecoder().decode(firmaBase64.toString());
     }
 
     /**

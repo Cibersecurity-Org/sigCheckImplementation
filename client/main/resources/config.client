@@ -1,11 +1,14 @@
-#
-#
-#
-QueryService.Proxy=SimpleQueryService:tcp -p 11800
-Master.Proxy=SimpleMaster:tcp -p 11900
+# Configuración del cliente de firma digital
 
-Ice.Default.Locator=DemoIceGrid/Locator:default -h localhost -p 4061
+# Host/puerto del servidor (personalizable para ZeroTier)
+Checker.Host=10.243.131.71
+Checker.Port=11801
 
-# Only listen on the ZeroTier's LIASOn1 interface by default.
-#
-Ice.Default.Host=10.243.205.239
+# Alternativamente, puede definir el proxy completo:
+Checker.Proxy=simpleChecker:tcp -h 10.243.131.71 -p 11801
+
+# Host por defecto para propiedades Ice (fallback)
+Ice.Default.Host=10.243.131.71
+
+# Sin necesidad de configuración adicional
+# El cliente se conecta directamente al proxy
